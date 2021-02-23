@@ -1,0 +1,139 @@
+<!DOCTYPE HTML>
+<html>
+    <head>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js" integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA==" crossorigin=""></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A==" crossorigin=""/>
+    </head>
+    <body>
+        <form id="name_form" style="display: none;">
+            <label>First Name:</label><input type="text" name="first_name" id="first_name"/>
+            <br/>
+            <label>Last Name:</label><input type="text" name="last_name" id="last_name"/>
+            <br/>
+            <input type="submit" value="submit" />
+        </form>
+        <h1>        </h1>
+        <center>
+            <h1>Click a location on the map and the drone will go there:</h1>
+        </center>
+        <h1>        </h1>
+        <h1>        </h1>
+        <center>
+            <div id="mapid" style="width: 600px; height: 400px;"></div>
+        </center>
+        <center>
+            <h1>        </h1>
+            <h1>Angle to destination:</h1>
+            <h2 id="angH"></h2>
+            <h1>        </h1>
+            <h1>Distance to destination:</h1>
+            <h2 id="distH"></h2>
+        </center>
+
+        <script>
+          var currLat;
+          var currLng;
+          var myMap;
+          function showPosition() {
+              if(navigator.geolocation) {
+                  navigator.geolocation.getCurrentPosition(function(position) {
+                      var positionInfo = position.coords.latitude + ", " + position.coords.longitude;
+                      $("#last_name").val(positionInfo);
+                      currLat = position.coords.latitude;
+                      currLng = position.coords.longitude;
+                  });
+              } else {
+                  alert("Sorry, your browser does not support HTML5 geolocation.");
+              }
+          }
+          function onMapClick(e) {
+            popup
+              .setLatLng(e.latlng)
+              .setContent("You clicked the map at " + e.latlng.toString())
+              .openOn(mymap);
+            console.log(e.latlng.lat);
+            console.log(pythagorean(4, -3));
+            ltStr = e.latlng.lat.toString() + ", " + e.latlng.lng.toString();
+            $("#first_name").val(ltStr);
+            showPosition();
+            $("#name_form").submit();
+            mn = [e.latlng.lat, e.latlng.lng]
+            //addMark(mn);
+          }
+
+          var popup = L.popup();
+
+          showPosition();
+            setTimeout(function() {   //  call a 3s setTimeout when the loop is called
+              mymap = L.map('mapid').setView([currLat, currLng], 20);
+              L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {
+                maxZoom: 20,
+                attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, ' +
+                  'Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+                id: 'mapbox/streets-v11',
+                tileSize: 512,
+                zoomOffset: -1
+              }).addTo(mymap);
+
+              L.marker([currLat, currLng]).addTo(mymap)
+                .bindPopup("Your location").openPopup();
+              function addMark(e) {
+                var marker
+                marker = L.marker(e).addTo(mymap)
+                    .bindPopup("Send drone to here").openPopup();
+              }
+              mymap.on('click', onMapClick);
+            }, 8000)
+
+
+
+        </script>
+
+        <script src="https://code.jquery.com/jquery-1.12.0.min.js"></script>
+        <script type="text/javascript">
+            function pythagorean(sideA, sideB){
+                var p = Math.sqrt(Math.pow(sideA, 2) + Math.pow(sideB, 2));
+                var g = Math.abs(p);
+                return g
+            }
+            $('#name_form').submit(function(e) {
+                    e.preventDefault();
+
+                    var data = {};
+                    var Form = this;
+
+                    $.each(this.elements, function(i, v) {
+                        var input = $(v);
+                        data[input.attr("name")] = input.val();
+                        delete data["undefined"];
+                    });
+
+                    $.ajax({
+                        type: 'POST',
+                        url: '/api/say_name',
+                        dataType: 'json',
+                        contentType: 'application/json; charset=utf-8',
+                        data: JSON.stringify(data),
+                        context: Form,
+                        success: function(callback) {
+                            console.log(callback);
+                            // Watch out for Cross Site Scripting security issues when setting dynamic content!
+                            console.log(callback.first_name + ' ' + callback.last_name);
+
+                            console.log(callback.deeg);
+                            if(callback.deeg < 0) {
+                                document.getElementById("angH").innerHTML = Math.abs(Math.round(callback.deeg)) + " degrees left";
+                            } else {
+                                document.getElementById("angH").innerHTML = Math.abs(Math.round(callback.deeg)) + " degrees right";
+                            }
+                            console.log(callback.dist);
+                            document.getElementById("distH").innerHTML = Math.round(callback.dist) + " metres";
+                        },
+                        error: function() {
+                            $(this).html("error!");
+                        }
+                    });
+                });
+        </script>
+    </body>
+</html>
